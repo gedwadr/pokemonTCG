@@ -137,7 +137,7 @@ def agent(obs_dict: dict) -> list[int]:
             elif cid == POLT:
                 s = 8000 if fc[POLT] + fc[SINISTCHA] == 0 and bench_room >= 1 else -1
             elif cid == LATIAS:
-                s = 8400 if fc[LATIAS] == 0 and bench_room >= 1 else -1
+                s = 4000 if len(my_field) <= 1 and fc[LATIAS] == 0 else -1  # 2-prize liability: only as an emergency body
             elif cid == CLEFAIRY:
                 s = 8300 if op_dragon and fc[CLEFAIRY] == 0 and bench_room >= 1 else -1
             elif cid == SPIRITOMB:
@@ -170,7 +170,7 @@ def agent(obs_dict: dict) -> list[int]:
                 if my["deckCount"] <= 4:
                     s = -1
             elif cid == LILLIE:
-                s = 7600 if len(hand) <= 4 and hns_hand == 0 and energy_in_hand + hc[DHELMISE] <= 1 else -1
+                s = 7600 if len(hand) <= 5 and hns_hand == 0 and energy_in_hand + hc[DHELMISE] <= 1 else -1
             elif cid == BOSS:
                 s = -1
                 for b in op["bench"]:
@@ -274,7 +274,7 @@ def discard_value(cid, hc, fc, hns_discard, op_dragon, stadium):
     if cid == SHUPPET: return 95
     if cid == SINISTCHA: return 90 if not (fc[POLT] and hns_discard >= 6 and hc[SINISTCHA] == 1) else 40
     if cid == POLT: return 85 if fc[POLT] + fc[SINISTCHA] or hc[POLT] >= 2 else 45
-    if cid == LATIAS: return 70 if fc[LATIAS] else -20
+    if cid == LATIAS: return 72
     if cid == PRISM: return 65 if stadium == PRISM or hc[PRISM] >= 2 else 20
     if cid == SPIRITOMB: return 60 if hns_discard < 9 else -30
     if cid == CLEFAIRY: return 55 if (not op_dragon or fc[CLEFAIRY]) else -40
@@ -306,7 +306,7 @@ def card_score(obs, o, ctx, me, my, op, hc, fc, hns_discard, hns_hand, energy_in
         if cid == DHELMISE:
             return 100 if fc[DHELMISE] < 2 else 20
         if cid == LATIAS:
-            return 90 if fc[LATIAS] == 0 else -1
+            return -1
         if cid == POLT:
             return 40 if fc[POLT] + fc[SINISTCHA] == 0 else -1
         if cid == CLEFAIRY:
@@ -351,7 +351,7 @@ def card_score(obs, o, ctx, me, my, op, hc, fc, hns_discard, hns_hand, energy_in
         if cid == DHELMISE:
             return 100 if fc[DHELMISE] + hc[DHELMISE] < 2 else 45
         if cid == LATIAS:
-            return 95 if fc[LATIAS] + hc[LATIAS] == 0 else 10
+            return 8
         if cid == CLEFAIRY:
             return 93 if op_dragon and fc[CLEFAIRY] + hc[CLEFAIRY] == 0 else 5
         if cid == POLT:
