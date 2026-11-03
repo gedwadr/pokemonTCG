@@ -1,0 +1,31 @@
+# Dragapult ex — TCGplayer "The Best Pokémon TCG Decks Right Now (October 2026)", deck #1
+# (Andrew Hedrick, Worlds 2026 winning list as published by TCGplayer, deck id 550721;
+#  TCGplayer's version runs 1 Judge where the Worlds list ran 1 Special Red Card)
+# format: <engine card id>,<count>
+# Pokémon (19)
+119,4    # Dreepy (TWM 128)
+120,4    # Drakloak (TWM 129)
+121,3    # Dragapult ex (TWM 130)
+112,2    # Munkidori (TWM 95)
+235,2    # Budew (PRE 4 / ASC 16)
+305,1    # Dunsparce (JTG 120)
+66,1     # Dudunsparce (TEF 129)
+1071,1   # Meowth ex (POR 62)
+140,1    # Fezandipiti ex (SFA 38 / ASC 142)
+# Trainers (32)
+1227,4   # Lillie's Determination (MEG 119)
+1152,4   # Poké Pad (POR 81)
+1120,4   # Crushing Hammer (SVI 168 / POR 71)
+1086,4   # Buddy-Buddy Poffin (TEF 144)
+1182,3   # Boss's Orders (PAL 172 / MEG 114)
+1097,3   # Night Stretcher (SFA 61 / ASC 196)
+1121,3   # Ultra Ball (SVI 196 / MEG 131)
+1198,2   # Crispin (SCR 133)
+1260,2   # Risky Ruins (MEG 127)
+1240,1   # Rosa's Encouragement (POR 84)
+1080,1   # Unfair Stamp (TWM 165)
+1213,1   # Judge (SVI 176 / POR 76)
+# Energy (9)
+2,3      # Basic Fire Energy
+7,3      # Basic Darkness Energy
+5,3      # Basic Psychic Energy

@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PTCG vs Bot</title>
+<style>
+  :root { --bg:#f4f5f7; --panel:#fff; --ink:#1c1e21; --muted:#6b7280; --line:#d9dde3; --you:#2563eb; --opp:#dc2626; --ok:#16a34a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --panel:#1b1f26; --ink:#e5e7eb; --muted:#9aa3af; --line:#2c333d; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.4 system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header b { font-size:16px; }
+  .muted { color:var(--muted); }
+  main { display:grid; grid-template-columns: 1fr 360px; gap:12px; padding:12px 16px; }
+  @media (max-width: 900px) { main { grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; }
+  #lobby { max-width:720px; margin:24px auto; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  #lobby h2 { grid-column:1/-1; margin:0; }
+  #lobby label { display:block; margin:10px 0 4px; color:var(--muted); font-size:12px; }
+  #lobby input, #lobby select { width:100%; padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); font:inherit; }
+  #lobby .actions { grid-column:1/-1; display:flex; gap:8px; align-items:center; }
+  pre.deck { font:12px/1.35 ui-monospace, monospace; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px; margin:6px 0 0; max-height:260px; overflow:auto; white-space:pre-wrap; }
+  button { padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--panel); color:var(--ink); cursor:pointer; font:inherit; }
+  button.primary { background:var(--you); color:#fff; border-color:var(--you); }
+  button:disabled { opacity:.5; cursor:default; }
+  .side h3 { margin:0 0 6px; font-size:13px; display:flex; gap:12px; flex-wrap:wrap; }
+  .side.you h3 { color:var(--you); } .side.opp h3 { color:var(--opp); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; min-height:44px; }
+  .card { border:1px solid var(--line); border-radius:6px; padding:6px 8px; min-width:120px; background:var(--bg); font-size:12px; }
+  .card .n { font-weight:600; }
+  .card .hp { color:var(--muted); }
+  .card.active { border-color:var(--ok); border-width:2px; }
+  .card.down { color:var(--muted); font-style:italic; }
+  .card img.thumb { width:96px; display:block; border-radius:4px; margin-bottom:4px; }
+  .card { position:relative; }
+  img.zoom { display:none; position:absolute; left:100%; top:0; z-index:10; width:300px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.4); pointer-events:none; }
+  .card:hover > img.zoom, #deckPreview .pc:hover > img.zoom { display:block; }
+  #deckPreview { display:flex; flex-wrap:wrap; gap:8px; max-height:420px; overflow:auto; margin-top:6px; }
+  #deckPreview .pc { width:110px; font-size:11px; text-align:center; position:relative; }
+  #deckPreview .pc img.thumb { width:110px; border-radius:4px; display:block; }
+  #opts button img { width:40px; vertical-align:middle; margin-right:8px; border-radius:3px; }
+  #opts button { display:flex; align-items:center; }
+  .cond { color:var(--opp); font-weight:600; }
+  #opts button { display:block; width:100%; text-align:left; margin:4px 0; }
+  #opts button.sel { background:var(--you); color:#fff; border-color:var(--you); }
+  #title { font-weight:600; margin:0 0 6px; }
+  #log { height:300px; overflow:auto; font:12px/1.35 ui-monospace, monospace; white-space:pre-wrap; }
+  #log .me { color:var(--you); } #log .res { font-weight:700; }
+  .hidden { display:none !important; }
+  #toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#b91c1c; color:#fff; padding:8px 14px; border-radius:6px; }
+</style>
+</head>
+<body>
+<header><b>PTCG vs Bot</b><span id="status" class="muted">connecting…</span><span id="roominfo" class="muted"></span><button id="leave" class="hidden">Leave / new game</button></header>
+
+<section id="lobby">
+  <h2>New game</h2>
+  <div class="panel">
+    <label>Your name</label><input id="name" value="greg">
+    <label>Your deck (predetermined list from <code>decks/</code>)</label><select id="deckfile"></select>
+    <div id="deckPreview">…</div><pre class="deck" id="deckProblems" style="display:none"></pre>
+    <p class="muted"><a href="/gallery" target="_blank">open all decks as a card gallery</a></p>
+  </div>
+  <div class="panel">
+    <label>Opponent bot</label><select id="bot"></select>
+    <label>Bot deck (applies to random/greedy only; submission bots such as rule_based_1 always play their own deck)</label><select id="botDeck"><option value="">same as mine</option></select>
+    <label>Room name</label><input id="room" value="solo">
+    <p class="muted">You get exactly the option list the engine gives the bot. Click one option when one pick is required; otherwise toggle options and press Confirm. Every decision is written to <code>rl_logs/</code> as JSON Lines and to <code>logs/</code> as text.</p>
+  </div>
+  <div class="actions"><button id="join" class="primary">Play</button><span id="rooms" class="muted"></span></div>
+</section>
+
+<main id="game" class="hidden">
+  <div>
+    <div class="panel side opp"><h3 id="oppHead"></h3><div class="row" id="oppBoard"></div></div>
+    <div class="panel" style="margin:8px 0; text-align:center" id="stadium"></div>
+    <div class="panel side you"><h3 id="youHead"></h3><div class="row" id="youBoard"></div>
+      <h3 style="margin-top:10px">Hand</h3><div class="row" id="hand"></div></div>
+  </div>
+  <div>
+    <div class="panel"><div id="title">Waiting…</div><div id="opts"></div>
+      <div style="display:flex; gap:8px; margin-top:8px; align-items:center"><button id="confirm" class="primary hidden">Confirm</button><span id="pick" class="muted"></span></div></div>
+    <div class="panel" style="margin-top:8px"><h3 style="margin:0 0 6px; font-size:13px" class="muted">Log</h3><div id="log"></div></div>
+  </div>
+</main>
+<div id="toast" class="hidden"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ENERGY = ["C","G","R","W","L","P","F","D","M","N","*","TR"];
+const AREA = {0:"all",1:"deck",2:"hand",3:"discard",4:"active",5:"bench",6:"prize",7:"stadium",8:"attached energy",9:"attached tool",10:"pre-evolution",11:"player",12:"looking",13:"playing",14:"deck bottom"};
+const TYPES = ["Pokemon","Item","Tool","Supporter","Stadium","Basic Energy","Special Energy"];
+let DB = {cards:{}, attacks:{}, images:{}};
+const img = id => DB.images[id] ? `<img src="${DB.images[id]}" loading="lazy" alt="" class="thumb">` : "";
+const zoom = id => DB.images[id] ? `<img src="${DB.images[id]}" class="zoom" alt="">` : "";
+let ws, me = null, pending = null, chosen = new Set();
+
+const cname = id => (DB.cards[id] || {}).name || ("#" + id);
+const ctext = id => { const c = DB.cards[id]; if (!c) return ""; let t = c.name;
+  if (c.hp) t += ` HP${c.hp}`; for (const s of c.skills||[]) t += `\n${s.name}: ${s.text}`;
+  for (const a of c.attacks||[]) { const at = DB.attacks[a]; if (at) t += `\n[${at.energies.map(e=>ENERGY[e]).join("")}] ${at.name} ${at.damage||""}: ${at.text}`; } return t; };
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+
+async function init() {
+  const db = await (await fetch("/api/cards")).json();
+  for (const c of db.cards) DB.cards[c.cardId] = c;
+  for (const a of db.attacks) DB.attacks[a.attackId] = a;
+  DB.images = await (await fetch("/api/images")).json();
+  const decks = await (await fetch("/api/decks")).json();
+  $("deckfile").innerHTML = decks.map(n => `<option>${esc(n)}</option>`).join("");
+  $("botDeck").innerHTML += decks.map(n => `<option>${esc(n)}</option>`).join("");
+  $("deckfile").onchange = previewDeck;
+  previewDeck();
+  connect();
+}
+async function previewDeck() {
+  const name = $("deckfile").value; if (!name) return;
+  const d = await (await fetch("/api/decks/" + encodeURIComponent(name))).json();
+  const counts = {}; for (const id of d.deck) counts[id] = (counts[id]||0) + 1;
+  const rows = Object.entries(counts).sort((a,b) => ((DB.cards[a[0]]||{}).cardType||0) - ((DB.cards[b[0]]||{}).cardType||0) || a[0]-b[0])
+    .map(([id,n]) => `<div class="pc" title="${esc(ctext(+id))}">${img(id)}${zoom(id)}<b>${n} x</b> ${esc(cname(+id))}</div>`);
+  $("deckPreview").innerHTML = rows.join("");
+  $("deckProblems").style.display = d.problems.length ? "block" : "none";
+  $("deckProblems").textContent = d.problems.length ? "ILLEGAL: " + d.problems.join("; ") : "";
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.remove("hidden"); setTimeout(() => t.classList.add("hidden"), 4000); }
+function logLine(txt, cls) { const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = txt; $("log").appendChild(d); $("log").scrollTop = 1e9; }
+
+function connect() {
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+  ws.onopen = () => $("status").textContent = "connected";
+  ws.onclose = () => { $("status").textContent = "disconnected (reload)"; };
+  ws.onmessage = ev => handle(JSON.parse(ev.data));
+}
+function send(o) { ws.send(JSON.stringify(o)); }
+
+function handle(m) {
+  switch (m.type) {
+    case "welcome":
+      $("bot").innerHTML = m.bots.map(b => `<option>${esc(b)}</option>`).join("");
+      $("bot").value = m.bots.includes("rule_based_1") ? "rule_based_1" : m.bots[0];
+      $("rooms").textContent = m.rooms.length ? "open rooms: " + m.rooms.map(r => r.room).join(", ") : "";
+      break;
+    case "joined": me = m.playerIndex; $("lobby").classList.add("hidden"); $("game").classList.remove("hidden"); $("leave").classList.remove("hidden");
+      $("roominfo").textContent = `room ${m.room} · you are P${me}`; break;
+    case "waiting": $("title").textContent = "Waiting for an opponent…"; break;
+    case "start": logLine(`game start: ${m.players[0]} (P0) vs ${m.players[1]} (P1)`); $("roominfo").textContent += ` · ${m.players[0]} vs ${m.players[1]}`; break;
+    case "state": m.view.logs.forEach(l => logLine(logText(l))); render(m.view.current); pending = null; $("opts").innerHTML = ""; $("confirm").classList.add("hidden"); $("pick").textContent = "";
+      $("title").textContent = "Bot is choosing…"; break;
+    case "observe": m.obs.logs.forEach(l => logLine(logText(l))); render(m.obs.current); showOptions(m); break;
+    case "error": toast(`${m.code}: ${m.message}`); logLine(`error: ${m.message}`); break;
+    case "result": { const who = m.winner ? `${m.winner} wins` : "draw";
+      logLine(`=== ${who} (${m.reasonText}) after ${m.steps} steps ===`, "res");
+      if (m.rl) logLine(`RL log: ${m.rl}`); if (m.log) logLine(`move log: ${m.log}`);
+      $("title").textContent = `Game over: ${who}`; $("opts").innerHTML = ""; $("confirm").classList.add("hidden"); $("pick").textContent = ""; break; }
+  }
+}
+
+function pokeCard(p, active) {
+  if (!p) return `<div class="card down">face down</div>`;
+  const en = p.energies.map(e => ENERGY[e]).join("");
+  const tools = (p.tools||[]).map(t => cname(t.id)).join(", ");
+  return `<div class="card ${active?"active":""}" title="${esc(ctext(p.id))}">${img(p.id)}${zoom(p.id)}<div class="n">${esc(cname(p.id))}</div><div class="hp">${p.hp}/${p.maxHp} HP ${en?"· "+en:""}</div>${tools?`<div class="hp">tool: ${esc(tools)}</div>`:""}${p.appearThisTurn?`<div class="hp">played this turn</div>`:""}</div>`;
+}
+function render(cur) {
+  const my = me === null ? 0 : me, op = 1 - my;
+  const used = [cur.supporterPlayed&&"supporter", cur.stadiumPlayed&&"stadium", cur.energyAttached&&"energy", cur.retreated&&"retreat"].filter(Boolean).join(", ");
+  $("stadium").textContent = `Turn ${cur.turn} · acting P${cur.yourIndex} · first P${cur.firstPlayer}` + (cur.stadium.length ? ` · Stadium: ${cname(cur.stadium[0].id)}` : "") + (used ? ` · used this turn: ${used}` : "");
+  for (const [idx, head, board, who] of [[op, "oppHead", "oppBoard", "BOT"], [my, "youHead", "youBoard", "YOU"]]) {
+    const p = cur.players[idx];
+    const conds = ["poisoned","burned","asleep","paralyzed","confused"].filter(k => p[k]).join(" ");
+    $(head).innerHTML = `<span>${who} P${idx}</span><span>deck ${p.deckCount}</span><span>hand ${p.handCount}</span><span>prizes ${p.prize.length}</span><span>discard ${p.discard.length}</span>${conds?`<span class="cond">${conds}</span>`:""}`;
+    $(board).innerHTML = (p.active.length ? pokeCard(p.active[0], true) : `<div class="card down">no Active</div>`) + p.bench.map(b => pokeCard(b, false)).join("");
+  }
+  const hand = cur.players[my].hand;
+  $("hand").innerHTML = hand ? hand.map((c, i) => `<div class="card" title="${esc(ctext(c.id))}">${img(c.id)}${zoom(c.id)}<div class="n">${esc(cname(c.id))}</div><div class="hp">hand[${i}]</div></div>`).join("") : `<span class="muted">hidden</span>`;
+}
+
+function showOptions(m) {
+  pending = m.obs.select; chosen = new Set();
+  $("title").textContent = m.title;
+  $("opts").innerHTML = "";
+  m.labels.forEach((label, i) => {
+    const b = document.createElement("button");
+    const o = pending.option[i];
+    const oc = optionCard(m.obs, o);
+    b.innerHTML = (oc && DB.images[oc.id] ? `<img src="${DB.images[oc.id]}" alt="">` : "") + `<span>${esc(i + ". " + label)}</span>`;
+    if ((o.type === 7 || o.type === 8 || o.type === 9) && o.area !== 1) { const c = (m.obs.current.players[me].hand||[])[o.index]; if (c) b.title = ctext(c.id); }
+    if (o.type === 13) { const a = DB.attacks[o.attackId]; if (a) b.title = a.text; }
+    if (o.type === 3) { const c = cardAt(m.obs, o); if (c) b.title = ctext(c.id); }
+    b.onclick = () => pick(i);
+    $("opts").appendChild(b);
+  });
+  updatePick();
+}
+function optionCard(obs, o) {
+  const me0 = me === null ? 0 : me;
+  if (o.type === 7) return cardAt(obs, {area: 2, index: o.index, playerIndex: me0});
+  if (o.type === 8 || o.type === 9) return cardAt(obs, {area: o.area, index: o.index, playerIndex: me0});
+  if (o.type === 3 || o.type === 10 || o.type === 11) return cardAt(obs, {area: o.area, index: o.index, playerIndex: o.playerIndex ?? me0});
+  if (o.type === 5 || o.type === 6 || o.type === 4) { const p = cardAt(obs, o); if (!p) return null;
+    const arr = o.type === 4 ? p.tools : p.energyCards; const k = o.type === 4 ? o.toolIndex : o.energyIndex; return (arr||[])[k] || null; }
+  return null;
+}
+function cardAt(obs, o) {
+  try {
+    if (o.area === 1) return obs.select.deck[o.index];
+    if (o.area === 12) return obs.current.looking[o.index];
+    if (o.area === 7) return obs.current.stadium[o.index];
+    const p = obs.current.players[o.playerIndex];
+    return {2:p.hand, 3:p.discard, 4:p.active, 5:p.bench, 6:p.prize}[o.area][o.index];
+  } catch (e) { return null; }
+}
+function pick(i) {
+  if (!pending) return;
+  if (pending.maxCount === 1 && pending.minCount === 1) return submit([i]);
+  chosen.has(i) ? chosen.delete(i) : (chosen.size < pending.maxCount && chosen.add(i));
+  [...$("opts").children].forEach((b, j) => b.classList.toggle("sel", chosen.has(j)));
+  updatePick();
+}
+function updatePick() {
+  if (!pending) return;
+  const single = pending.maxCount === 1 && pending.minCount === 1;
+  $("confirm").classList.toggle("hidden", single);
+  $("confirm").disabled = chosen.size < pending.minCount;
+  $("pick").textContent = single ? "click an option" : `pick ${pending.minCount}${pending.minCount!==pending.maxCount?"–"+pending.maxCount:""} (selected ${chosen.size})`;
+}
+function submit(sel) {
+  const labels = [...$("opts").children].filter((b, j) => sel.includes(j)).map(b => b.textContent.replace(/^\d+\. /, "").trim());
+  logLine(`> ${labels.join(", ") || "(nothing)"}`, "me");
+  send({type: "select", select: sel}); pending = null; $("opts").innerHTML = ""; $("confirm").classList.add("hidden"); $("pick").textContent = "";
+}
+$("confirm").onclick = () => submit([...chosen]);
+
+function logText(l) {
+  const who = l.playerIndex === undefined ? "" : (l.playerIndex === me ? "You" : "Bot");
+  const n = cname;
+  switch (l.type) {
+    case 0: return `${who} shuffled`;
+    case 1: return `${who} ${l.hasBasicPokemon ? "has" : "has no"} Basic Pokémon`;
+    case 2: return `--- ${who}: turn start ---`;
+    case 3: return `--- ${who}: turn end ---`;
+    case 4: return `${who} drew ${n(l.cardId)}`;
+    case 5: return `${who} drew a card`;
+    case 6: return `${who} moved ${n(l.cardId)}: ${AREA[l.fromArea]||l.fromArea} → ${AREA[l.toArea]||l.toArea}`;
+    case 7: return `${who} moved a card: ${AREA[l.fromArea]||l.fromArea} → ${AREA[l.toArea]||l.toArea}`;
+    case 8: return `${who} switched ${n(l.cardIdActive)} with ${n(l.cardIdBench)}`;
+    case 9: return `${who}: ${n(l.cardIdBefore)} became ${n(l.cardIdAfter)}`;
+    case 10: return `${who} played ${n(l.cardId)}`;
+    case 11: return `${who} attached ${n(l.cardId)} to ${n(l.cardIdTarget)}`;
+    case 12: return `${who} evolved ${n(l.cardIdTarget)} into ${n(l.cardId)}`;
+    case 13: return `${who} devolved ${n(l.cardIdTarget)}`;
+    case 14: return `${who} moved ${n(l.cardId)} from ${n(l.cardIdBefore)} to ${n(l.cardIdAfter)}`;
+    case 15: return `${who}: ${n(l.cardId)} used ${(DB.attacks[l.attackId]||{}).name || "attack#"+l.attackId}`;
+    case 16: return `${who}: ${n(l.cardId)} ${l.value>0?"+":""}${l.value} ${l.putDamageCounter?"damage counters":"HP"}`;
+    case 17: case 18: case 19: case 20: case 21: return `${who}: ${n(l.cardId)} ${l.isRecover?"recovered from":"is now"} ${["Poisoned","Burned","Asleep","Paralyzed","Confused"][l.type-17]}`;
+    case 22: return `${who} flipped ${l.head ? "heads" : "tails"}`;
+    case 23: return `=== result: ${l.result === 2 ? "draw" : "player " + l.result + " wins"} ===`;
+    default: return JSON.stringify(l);
+  }
+}
+
+$("join").onclick = () => {
+  const m = {type: "join", kind: "human", room: $("room").value || "solo", name: $("name").value || "human", deck: $("deckfile").value, bot: $("bot").value};
+  if ($("botDeck").value) m.botDeck = $("botDeck").value; else m.botDeck = $("deckfile").value;
+  send(m);
+};
+$("leave").onclick = () => { try { send({type: "leave"}); } catch (e) {} location.reload(); };
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# generated at runtime
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+rl_logs/
+replays/
+screenshots/
+
+# competition-use-only material (not redistributable): restore with scripts/fetch_engine.py
+engine/
+data/*
+!data/card_images.json
