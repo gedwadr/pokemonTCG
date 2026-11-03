@@ -174,6 +174,21 @@ runs every pairing of the entrants plus each entrant against rule_based_1, in pa
 pairing (text move logs, results.csv, stdout.txt), and writes `summary.md` with the win matrix.
 Dragapult is piloted by dragapult_1, the other decks by generic_1; add `--rl` for RL records.
 
+## Distillation data: self-play states labeled by rollouts
+
+```
+python scripts/generate_states.py --target 50000 --workers 16        # data/selfplay/rl/   (RL records, search blob kept)
+python scripts/label_states.py --workers 16 --determinizations 16   # data/selfplay/labels/
+```
+
+`ptcg/search.py` wraps the engine's search API (`SearchBegin`/`SearchStep`): a decision state is
+cloned, the hidden cards (both decks, prizes, the opponent's hand) are sampled from the true
+remaining multiset of each 60-card list, and every single-pick option is rolled out to the end of
+the game with the greedy pilot on both sides. The label for a state is the mean rollout value of
+each option in [0, 1] (prize differential if the step cap is hit) and the index of the best one.
+Multi-pick selections are recorded but not labeled. The labeler is resumable per game file.
+Output lives under `data/` and is not committed.
+
 ## LLM training corpus (card text)
 
 ```

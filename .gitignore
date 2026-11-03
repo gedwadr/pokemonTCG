@@ -11,3 +11,4 @@ screenshots/
 engine/
 data/*
 !data/card_images.json
+data/selfplay/
