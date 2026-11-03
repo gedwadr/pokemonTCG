@@ -154,6 +154,23 @@ See `PROTOCOL.md`. In short: send `join`, wait for `observe` frames, answer each
 with `select`. The `obs` inside `observe` is byte-for-byte what the Kaggle
 environment passes to `agent()`, so the same code runs in both places.
 
+## LLM training corpus (card text)
+
+```
+python scripts/build_llm_dataset.py        # writes data/llm/ (gitignored: card text is competition-use-only)
+```
+
+- `data/llm/cards.txt`: one plain-text document per card (name, printing, stage, type, HP, rule
+  box, abilities, attacks with costs/damage/effects, weakness, resistance, retreat), energy
+  symbols expanded to words. Documents are separated by a `---` line. For raw / continued-pretraining style SFT.
+- `data/llm/cards.jsonl`: the same text per card plus the structured fields.
+- `data/llm/sft.jsonl`: ~9,300 chat-format pairs (`{"messages":[user, assistant]}`), 4-8 per card
+  (describe the card, HP/type, weakness/resistance/retreat, evolution, each ability, each attack,
+  prize value, deck-legality for ACE SPEC) plus two questions per glossary term. Shuffled; hold out
+  by `card_id` if you want an unseen-card validation split.
+- `data/llm/glossary.txt`: 37 Pokémon TCG rules terms in plain language (Prize cards, Bench, Weakness,
+  Rule Box, Tera, ACE SPEC, Special Conditions, turn structure, deck rules...).
+
 ## Deck files
 
 One card ID per line (the competition's `deck.csv` format), or `id,count` /
