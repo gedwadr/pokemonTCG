@@ -40,6 +40,8 @@ def main() -> None:
     agent_b, deck_b = bots.load_agent(args.b)
     deck_a = load_deck(args.deck_a) if args.deck_a else deck_a or load_deck(SAMPLE)
     deck_b = load_deck(args.deck_b) if args.deck_b else deck_b or load_deck(SAMPLE)
+    bots.apply_deck(agent_a, deck_a)
+    bots.apply_deck(agent_b, deck_b)
     for label, d in (("A", deck_a), ("B", deck_b)):
         problems = validate_deck(d)
         if problems:

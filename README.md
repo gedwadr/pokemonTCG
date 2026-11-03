@@ -154,6 +154,26 @@ See `PROTOCOL.md`. In short: send `join`, wait for `observe` frames, answer each
 with `select`. The `obs` inside `observe` is byte-for-byte what the Kaggle
 environment passes to `agent()`, so the same code runs in both places.
 
+## Meta decks and the tournament runner
+
+`decks/sources/*.txt` hold tournament decklists in Limitless format (`4 Dreepy TWM 128`), with the
+source and event in a comment. `scripts/import_decklist.py <src> <deck.csv>` maps them to engine card
+IDs by set+number, then by name, and reports anything not in the competition pool (substitute by hand).
+Current entrants: Dragapult ex, Basic Box, Slowking, N's Zoroark, Alakazam, Crustle, Festival Lead.
+
+`agents/generic_1/` is a deck-agnostic pilot built on the engine's card and attack tables (evolve,
+abilities, bench, energy toward the nearest affordable attack, draw/search Trainers, Boss for
+knockouts, retreat, attack for most damage). It plays any deck but knows no deck-specific engines, so
+treat its results as a baseline, not a measure of a deck's real strength.
+
+```
+python scripts/tournament.py --games 500 --jobs 8 --out logs/tournament
+```
+
+runs every pairing of the entrants plus each entrant against rule_based_1, in parallel, one folder per
+pairing (text move logs, results.csv, stdout.txt), and writes `summary.md` with the win matrix.
+Dragapult is piloted by dragapult_1, the other decks by generic_1; add `--rl` for RL records.
+
 ## LLM training corpus (card text)
 
 ```

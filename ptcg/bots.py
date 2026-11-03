@@ -113,6 +113,13 @@ def make_bot(name: str, deck: list[int] | None = None) -> tuple[Agent, list[int]
     return agent, (own_deck if deck is None else deck)
 
 
+def apply_deck(agent: Agent, deck: list[int]) -> None:
+    """Tell a loaded submission which deck it plays, if it exposes ``set_deck`` (deck-agnostic agents)."""
+    g = getattr(agent, "__globals__", None)
+    if g and callable(g.get("set_deck")):
+        g["set_deck"](deck)
+
+
 def load_agent(spec: str) -> tuple[Agent, list[int] | None]:
     """Resolve ``spec`` to ``(agent, deck_or_None)``.
 

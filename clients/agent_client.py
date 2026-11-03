@@ -82,6 +82,7 @@ def main() -> None:
         deck = load_deck(args.deck)
     if deck is None:
         deck = load_deck(Path(__file__).resolve().parent.parent / "decks" / "sample.csv")
+    bots.apply_deck(agent, deck)
     name = args.name or (args.agent if args.agent in bots.BUILTIN else Path(args.agent).parent.name or "agent")
 
     wins = 0
